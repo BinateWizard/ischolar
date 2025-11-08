@@ -1,0 +1,256 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+  // If you use PlanetScale, uncomment the next line:
+  // relationMode = "prisma"
+}
+
+// Enums
+enum Role {
+  STUDENT
+  REVIEWER
+  APPROVER
+  ADMIN
+}
+
+enum AppStatus {
+  DRAFT
+  SUBMITTED
+  IN_VERIFICATION
+  FOR_CLARIFICATION
+  APPROVED
+  DENIED
+  WAITLIST
+}
+
+enum FileStatus {
+  PENDING
+  VALID
+  INVALID
+}
+
+// User profile - extends Supabase auth.users
+model Profile {
+  id            String   @id @default(uuid())
+  userId        String   @unique @map("user_id") // links to auth.users
+  lastName      String   @map("last_name")
+  firstName     String   @map("first_name")
+  middleInitial String?  @map("middle_initial")
+  email         String   @unique
+  role          Role     @default(STUDENT)
+  studentNumber String?  @unique @map("student_number")
+  campus        String?
+  course        String?
+  yearLevel     String?  @map("year_level")
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  applications      Application[]
+  scholarshipAwards ScholarshipAward[]
+  reviews           Review[]
+  notifications     Notification[]
+  auditLogs         AuditLog[]
+
+  @@index([role])
+  @@map("profiles")
+}
+
+// Scholarship programs (TES, TDP, institutional, etc.)
+model Program {
+  id          String   @id @default(uuid())
+  code        String   @unique // 'TES', 'TDP', etc.
+  name        String
+  description String?  @db.Text
+  isActive    Boolean  @default(true) @map("is_active")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  cycles ProgramCycle[]
+
+  @@map("programs")
+}
+
+// Each "call" for applications: AY + term + schedule
+model ProgramCycle {
+  id        String    @id @default(uuid())
+  programId String    @map("program_id")
+  ayTerm    String    @map("ay_term") // e.g. 'AY2025-2026 1st Sem'
+  openAt    DateTime  @map("open_at")
+  closeAt   DateTime  @map("close_at")
+  maxSlots  Int?      @map("max_slots")
+  budgetCap Decimal?  @map("budget_cap") @db.Decimal(14, 2)
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt @map("updated_at")
+
+  program      Program            @relation(fields: [programId], references: [id], onDelete: Cascade)
+  requirements Requirement[]
+  applications Application[]
+  awards       ScholarshipAward[]
+
+  @@unique([programId, ayTerm])
+  @@index([programId])
+  @@map("program_cycles")
+}
+
+// Requirements per program cycle (COR, Grade slip, etc.)
+model Requirement {
+  id              String   @id @default(uuid())
+  programCycleId  String   @map("program_cycle_id")
+  code            String   // 'COR', 'GRADES', 'PWD_ID'
+  label           String
+  description     String?  @db.Text
+  mimeTypes       Json?    @map("mime_types") // array of allowed types
+  maxSizeMb       Int      @default(10) @map("max_size_mb")
+  mandatory       Boolean  @default(true)
+  sortOrder       Int      @default(0) @map("sort_order")
+  createdAt       DateTime @default(now()) @map("created_at")
+
+  programCycle     ProgramCycle      @relation(fields: [programCycleId], references: [id], onDelete: Cascade)
+  applicationFiles ApplicationFile[]
+
+  @@index([programCycleId])
+  @@map("requirements")
+}
+
+// One per student per program_cycle
+model Application {
+  id              String     @id @default(uuid())
+  studentId       String     @map("student_id")
+  programCycleId  String     @map("program_cycle_id")
+  status          AppStatus  @default(DRAFT)
+  answers         Json       @default("{}") // structured data: 4Ps, income, address, etc.
+  score           Int?
+  rank            Int?
+  decisionReason  String?    @map("decision_reason") @db.Text
+  submittedAt     DateTime?  @map("submitted_at")
+  decidedAt       DateTime?  @map("decided_at")
+  createdAt       DateTime   @default(now()) @map("created_at")
+  updatedAt       DateTime   @updatedAt @map("updated_at")
+
+  student      Profile           @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  programCycle ProgramCycle      @relation(fields: [programCycleId], references: [id], onDelete: Cascade)
+  files        ApplicationFile[]
+  reviews      Review[]
+  award        ScholarshipAward?
+
+  @@unique([studentId, programCycleId])
+  @@index([programCycleId, status])
+  @@index([studentId])
+  @@index([programCycleId, score])
+  @@map("applications")
+}
+
+// Each uploaded file tied to a requirement
+model ApplicationFile {
+  id            String      @id @default(uuid())
+  applicationId String      @map("application_id")
+  requirementId String      @map("requirement_id")
+  path          String      // Supabase storage path
+  mimeType      String      @map("mime_type")
+  sizeBytes     BigInt      @map("size_bytes")
+  status        FileStatus  @default(PENDING)
+  issues        Json?       // e.g. ["BLURRY","MISMATCH_NAME"]
+  uploadedAt    DateTime    @default(now()) @map("uploaded_at")
+
+  application Application @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  requirement Requirement @relation(fields: [requirementId], references: [id], onDelete: Cascade)
+
+  @@unique([applicationId, requirementId])
+  @@index([applicationId])
+  @@map("application_files")
+}
+
+// Internal review actions per application
+model Review {
+  id            String   @id @default(uuid())
+  applicationId String   @map("application_id")
+  reviewerId    String   @map("reviewer_id")
+  checklist     Json?    // result per requirement
+  notes         String?  @db.Text
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  application Application @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  reviewer    Profile     @relation(fields: [reviewerId], references: [id])
+
+  @@index([applicationId])
+  @@map("reviews")
+}
+
+// Represents scholars after approval (used for monitoring & renewals)
+model ScholarshipAward {
+  id              String   @id @default(uuid())
+  applicationId   String   @unique @map("application_id")
+  studentId       String   @map("student_id")
+  programCycleId  String   @map("program_cycle_id")
+  active          Boolean  @default(true)
+  startTerm       String?  @map("start_term")
+  endTerm         String?  @map("end_term")
+  remarks         String?  @db.Text
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  application   Application    @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  student       Profile        @relation(fields: [studentId], references: [id])
+  programCycle  ProgramCycle   @relation(fields: [programCycleId], references: [id])
+  disbursements Disbursement[]
+
+  @@unique([studentId, programCycleId])
+  @@index([studentId])
+  @@map("scholarship_awards")
+}
+
+// Track allowance/tuition releases per scholar
+model Disbursement {
+  id           String    @id @default(uuid())
+  awardId      String    @map("award_id")
+  periodLabel  String    @map("period_label") // '1st Sem 25-26', 'Oct 2025', etc.
+  amount       Decimal   @db.Decimal(14, 2)
+  releasedAt   DateTime? @map("released_at")
+  referenceNo  String?   @map("reference_no")
+  notes        String?   @db.Text
+  createdAt    DateTime  @default(now()) @map("created_at")
+
+  award ScholarshipAward @relation(fields: [awardId], references: [id], onDelete: Cascade)
+
+  @@index([awardId])
+  @@map("disbursements")
+}
+
+// Notifications for users
+model Notification {
+  id        String   @id @default(uuid())
+  userId    String   @map("user_id")
+  title     String
+  body      String?  @db.Text
+  type      String?  // 'STATUS_UPDATE','MISSING_DOC','REMINDER'
+  isRead    Boolean  @default(false) @map("is_read")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  user Profile @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, isRead])
+  @@map("notifications")
+}
+
+// For compliance and traceability
+model AuditLog {
+  id        String   @id @default(uuid())
+  actorId   String?  @map("actor_id")
+  action    String   // 'APPLICATION_STATUS_CHANGE', 'FILE_VALIDATED', etc.
+  subject   String?  // 'applications:<id>'
+  details   Json?
+  createdAt DateTime @default(now()) @map("created_at")
+
+  actor Profile? @relation(fields: [actorId], references: [id])
+
+  @@index([subject])
+  @@map("audit_logs")
+}
+

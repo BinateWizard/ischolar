@@ -1,16 +1,17 @@
 "use client";
 
 import { useState } from "react";
-import { createSupabaseBrowserClient } from "@/lib/supabase/client";
+import { signIn, signInWithGoogle } from "@/lib/firebase/auth";
 import { useRouter } from "next/navigation";
+import { FirebaseError } from "firebase/app";
 
 export default function SignInPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
+  const [googleLoading, setGoogleLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const router = useRouter();
-  const supabase = createSupabaseBrowserClient();
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -18,30 +19,32 @@ export default function SignInPage() {
     setError(null);
     
     try {
-      const { data, error: signInError } = await supabase.auth.signInWithPassword({ 
-        email, 
-        password 
-      });
-      
-      if (signInError) {
-        setError(signInError.message);
-        setLoading(false);
-        return;
-      }
+      // Sign in with Firebase
+      await signIn(email, password);
 
-      // Sync profile in database
-      if (data.session) {
-        const res = await fetch('/api/auth/sync-profile', { method: 'POST' });
-        if (!res.ok) {
-          console.error('Failed to sync profile');
-        }
-        
-        router.push("/profile");
-        router.refresh();
-      }
-    } catch (err) {
+      // Redirect to profile
+      router.push("/profile");
+      router.refresh();
+    } catch (err: any) {
       console.error('Sign in error:', err);
-      setError('An unexpected error occurred');
+      
+      // Handle Firebase auth errors
+      if (err instanceof FirebaseError) {
+        switch (err.code) {
+          case 'auth/invalid-credential':
+          case 'auth/user-not-found':
+          case 'auth/wrong-password':
+            setError('Invalid email or password.');
+            break;
+          case 'auth/too-many-requests':
+            setError('Too many failed attempts. Please try again later.');
+            break;
+          default:
+            setError(err.message || 'Failed to sign in');
+        }
+      } else {
+        setError('An unexpected error occurred');
+      }
       setLoading(false);
     }
   }
@@ -60,7 +63,7 @@ export default function SignInPage() {
                 id="email"
                 type="email"
                 placeholder="you@example.com"
-                className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
                 required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
@@ -73,7 +76,7 @@ export default function SignInPage() {
                 id="password"
                 type="password"
                 placeholder="••••••••"
-                className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
                 required
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
@@ -92,6 +95,46 @@ export default function SignInPage() {
               disabled={loading}
             >
               {loading ? "Signing in..." : "Continue"}
+            </button>
+
+            <div className="relative my-4">
+              <div className="absolute inset-0 flex items-center">
+                <span className="w-full border-t" />
+              </div>
+              <div className="relative flex justify-center text-xs uppercase">
+                <span className="bg-white px-2 text-gray-500">Or continue with</span>
+              </div>
+            </div>
+
+            <button
+              type="button"
+              onClick={async () => {
+                setError(null);
+                setGoogleLoading(true);
+                try {
+                  await signInWithGoogle();
+                  router.push('/profile');
+                  router.refresh();
+                } catch (e: any) {
+                  setError(e.message || 'Google sign-in failed');
+                } finally {
+                  setGoogleLoading(false);
+                }
+              }}
+              disabled={googleLoading}
+              className="w-full flex items-center justify-center gap-2 py-2 px-4 border rounded bg-white hover:bg-gray-50 text-gray-700 disabled:opacity-50"
+            >
+              {googleLoading ? 'Signing in...' : (
+                <>
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M23.52 12.272c0-.816-.072-1.632-.216-2.424H12v4.584h6.48a5.54 5.54 0 0 1-2.4 3.648v3.024h3.888c2.28-2.088 3.552-5.16 3.552-8.832Z" fill="#4285F4"/>
+                    <path d="M12 24c3.24 0 5.976-1.056 7.968-2.88l-3.888-3.024c-1.08.744-2.472 1.176-4.08 1.176-3.12 0-5.76-2.088-6.72-4.92H1.248v3.096A12.004 12.004 0 0 0 12 24Z" fill="#34A853"/>
+                    <path d="M5.28 14.352A7.21 7.21 0 0 1 4.968 12c0-.816.144-1.608.312-2.352V6.552H1.248A12.004 12.004 0 0 0 0 12c0 1.92.456 3.744 1.248 5.448l4.032-3.096Z" fill="#FBBC05"/>
+                    <path d="M12 4.776c1.764 0 3.336.6 4.584 1.776l3.432-3.432C17.976 1.26 15.24 0 12 0 7.248 0 2.88 2.736 1.248 6.552l4.032 3.096c.96-2.832 3.6-4.872 6.72-4.872Z" fill="#EA4335"/>
+                  </svg>
+                  <span>Google</span>
+                </>
+              )}
             </button>
           </form>
 

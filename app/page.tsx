@@ -1,10 +1,20 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import Footer from "@/components/Footer";
 
 export default function Home() {
+  const [showVerified, setShowVerified] = useState(false);
+  const searchParams = useSearchParams();
+
   useEffect(() => {
+    // Check if redirected from email verification
+    if (searchParams.get('verified') === 'true') {
+      setShowVerified(true);
+      setTimeout(() => setShowVerified(false), 5000);
+    }
+
     const observer = new IntersectionObserver(
       (entries) => {
         entries.forEach((entry) => {
@@ -27,6 +37,21 @@ export default function Home() {
 
   return (
     <>
+        {/* Success Notification */}
+        {showVerified && (
+          <div className="fixed top-24 left-1/2 transform -translate-x-1/2 z-50 animate-fade-in">
+            <div className="bg-green-50 border-2 border-green-500 rounded-lg shadow-lg p-4 flex items-center gap-3">
+              <svg className="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              <div>
+                <p className="font-semibold text-green-900">Account Created Successfully!</p>
+                <p className="text-sm text-green-700">Welcome to iScholar. You can now sign in.</p>
+              </div>
+            </div>
+          </div>
+        )}
+
       {/* Scroll container confined to main content area (excludes navbar/footer) */}
   <div id="landing-scroll" className="h-screen overflow-y-auto snap-y snap-mandatory scroll-pt-0 scroll-pb-0">
       {/* Hero Section */}

@@ -3,11 +3,13 @@
 import { useState, useEffect } from "react";
 import { getVerificationStatus, uploadVerificationDocument, updateProfileInfo } from "@/lib/actions/verification";
 import { useRouter } from "next/navigation";
+import { useAuth } from "@/lib/hooks/useAuth";
 
 type VerificationStatus = "PENDING_VERIFICATION" | "UNDER_REVIEW" | "VERIFIED" | "REJECTED" | "SUSPENDED";
 type DocumentType = "STUDENT_ID" | "PROOF_OF_ENROLLMENT" | "GOVERNMENT_ID";
 
 export default function VerifyAccountPage() {
+  const { user, loading: authLoading } = useAuth();
   const [profile, setProfile] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [step, setStep] = useState(1);
@@ -26,12 +28,16 @@ export default function VerifyAccountPage() {
   const [enrollmentFile, setEnrollmentFile] = useState<File | null>(null);
 
   useEffect(() => {
-    loadProfile();
-  }, []);
+    if (user) {
+      loadProfile();
+    }
+  }, [user]);
 
   async function loadProfile() {
+    if (!user) return;
+    
     try {
-      const data = await getVerificationStatus();
+      const data = await getVerificationStatus(user.uid);
       if (!data) {
         router.push("/signin");
         return;
@@ -62,11 +68,13 @@ export default function VerifyAccountPage() {
 
   async function handleProfileSubmit(e: React.FormEvent) {
     e.preventDefault();
+    if (!user) return;
+    
     setError(null);
     setLoading(true);
 
     try {
-      await updateProfileInfo({ studentNumber, campus, course, yearLevel });
+      await updateProfileInfo(user.uid, { studentNumber, campus, course, yearLevel });
       setStep(2);
     } catch (err: any) {
       setError(err.message || "Failed to update profile");
@@ -76,6 +84,8 @@ export default function VerifyAccountPage() {
   }
 
   async function handleDocumentUpload(docType: DocumentType, file: File) {
+    if (!user) return;
+    
     setError(null);
     setUploading(true);
 
@@ -84,7 +94,7 @@ export default function VerifyAccountPage() {
       formData.append("docType", docType);
       formData.append("file", file);
       
-      await uploadVerificationDocument(formData);
+      await uploadVerificationDocument(user.uid, formData);
       await loadProfile();
     } catch (err: any) {
       setError(err.message || "Failed to upload document");

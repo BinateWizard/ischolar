@@ -1,12 +1,44 @@
+"use client";
+
+import { useAuth } from "@/lib/hooks/useAuth";
 import { getUserProfile } from "@/lib/actions/profile";
-import { requireAuth } from "@/lib/auth";
+import { useEffect, useState } from "react";
 
-type ProfileData = NonNullable<Awaited<ReturnType<typeof getUserProfile>>>;
-type Application = ProfileData['applications'][number];
+type ProfileData = Awaited<ReturnType<typeof getUserProfile>>;
+type Application = NonNullable<ProfileData>['applications'][number];
 
-export default async function ProfilePage() {
-  const user = await requireAuth();
-  const profile = await getUserProfile();
+export default function ProfilePage() {
+  const { user, loading } = useAuth();
+  const [profile, setProfile] = useState<ProfileData>(null);
+  const [profileLoading, setProfileLoading] = useState(true);
+
+  useEffect(() => {
+    async function loadProfile() {
+      if (!user) return;
+      
+      try {
+        const data = await getUserProfile(user.uid);
+        setProfile(data);
+      } catch (error) {
+        console.error('Failed to load profile:', error);
+      } finally {
+        setProfileLoading(false);
+      }
+    }
+
+    loadProfile();
+  }, [user]);
+
+  if (loading || profileLoading) {
+    return (
+      <div className="snap-start min-h-[calc(100vh-5rem)] py-10 px-4 bg-gradient-to-b from-white to-slate-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading profile...</p>
+        </div>
+      </div>
+    );
+  }
 
   if (!profile) {
     return (

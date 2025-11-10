@@ -1,21 +1,55 @@
-import { getVerificationRequests, reviewVerificationDocument, updateVerificationStatus } from "@/lib/actions/verification";
-import { requireAuth } from "@/lib/auth";
-import { redirect } from "next/navigation";
-import { prisma } from "@/lib/prisma";
+"use client";
+
+import { useAuth } from "@/lib/hooks/useAuth";
+import { getVerificationRequests } from "@/lib/actions/verification";
+import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import VerificationReviewClient from "./VerificationReviewClient";
 
-export default async function AdminVerificationsPage() {
-  const user = await requireAuth();
-  
-  const profile = await prisma.profile.findUnique({
-    where: { userId: user.id }
-  });
+type VerificationRequests = Awaited<ReturnType<typeof getVerificationRequests>>;
 
-  if (!profile || !['ADMIN', 'REVIEWER'].includes(profile.role)) {
-    redirect('/profile');
+export default function AdminVerificationsPage() {
+  const { user, loading } = useAuth();
+  const router = useRouter();
+  const [requests, setRequests] = useState<VerificationRequests>([]);
+  const [requestsLoading, setRequestsLoading] = useState(true);
+  const [isAdmin, setIsAdmin] = useState(false);
+
+  useEffect(() => {
+    async function loadData() {
+      if (!user) return;
+      
+      try {
+        const data = await getVerificationRequests(user.uid);
+        setRequests(data);
+        setIsAdmin(true);
+      } catch (error: any) {
+        console.error('Failed to load verification requests:', error);
+        if (error.message === 'Unauthorized') {
+          router.push('/profile');
+        }
+      } finally {
+        setRequestsLoading(false);
+      }
+    }
+
+    loadData();
+  }, [user, router]);
+
+  if (loading || requestsLoading) {
+    return (
+      <div className="min-h-[calc(100vh-5rem)] py-12 px-4 bg-gradient-to-b from-blue-50/30 to-slate-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading verification requests...</p>
+        </div>
+      </div>
+    );
   }
 
-  const verificationRequests = await getVerificationRequests();
+  if (!isAdmin) {
+    return null; // Will redirect in useEffect
+  }
 
   return (
     <div className="min-h-[calc(100vh-5rem)] py-12 px-4 bg-gradient-to-b from-blue-50/30 to-slate-50">
@@ -25,7 +59,7 @@ export default async function AdminVerificationsPage() {
           <p className="text-gray-600">Review and approve student verification requests</p>
         </div>
 
-        <VerificationReviewClient requests={verificationRequests} />
+        <VerificationReviewClient requests={requests} />
       </div>
     </div>
   );

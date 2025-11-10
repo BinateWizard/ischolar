@@ -1,19 +1,15 @@
 "use server";
 
-import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { prisma } from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
 
-export async function getVerificationStatus() {
-  const supabase = await createSupabaseServerClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  
-  if (!user) {
+export async function getVerificationStatus(userId: string) {
+  if (!userId) {
     return null;
   }
 
   const profile = await prisma.profile.findUnique({
-    where: { userId: user.id },
+    where: { userId },
     include: {
       verificationDocuments: {
         orderBy: { createdAt: 'desc' }
@@ -24,16 +20,13 @@ export async function getVerificationStatus() {
   return profile;
 }
 
-export async function uploadVerificationDocument(formData: FormData) {
-  const supabase = await createSupabaseServerClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  
-  if (!user) {
+export async function uploadVerificationDocument(userId: string, formData: FormData) {
+  if (!userId) {
     throw new Error("Not authenticated");
   }
 
   const profile = await prisma.profile.findUnique({
-    where: { userId: user.id }
+    where: { userId }
   });
 
   if (!profile) {
@@ -110,21 +103,18 @@ export async function uploadVerificationDocument(formData: FormData) {
   return { success: true };
 }
 
-export async function updateProfileInfo(data: {
+export async function updateProfileInfo(userId: string, data: {
   studentNumber: string;
   campus: string;
   course: string;
   yearLevel: string;
 }) {
-  const supabase = await createSupabaseServerClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  
-  if (!user) {
+  if (!userId) {
     throw new Error("Not authenticated");
   }
 
   await prisma.profile.update({
-    where: { userId: user.id },
+    where: { userId },
     data: {
       studentNumber: data.studentNumber,
       campus: data.campus,
@@ -139,16 +129,13 @@ export async function updateProfileInfo(data: {
 }
 
 // Admin actions
-export async function getVerificationRequests() {
-  const supabase = await createSupabaseServerClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  
-  if (!user) {
+export async function getVerificationRequests(adminUserId: string) {
+  if (!adminUserId) {
     throw new Error("Not authenticated");
   }
 
   const profile = await prisma.profile.findUnique({
-    where: { userId: user.id }
+    where: { userId: adminUserId }
   });
 
   if (!profile || !['ADMIN', 'REVIEWER'].includes(profile.role)) {
@@ -171,19 +158,17 @@ export async function getVerificationRequests() {
 }
 
 export async function reviewVerificationDocument(
+  reviewerUserId: string,
   documentId: string,
   status: 'VALID' | 'INVALID',
   rejectionReason?: string
 ) {
-  const supabase = await createSupabaseServerClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  
-  if (!user) {
+  if (!reviewerUserId) {
     throw new Error("Not authenticated");
   }
 
   const reviewer = await prisma.profile.findUnique({
-    where: { userId: user.id }
+    where: { userId: reviewerUserId }
   });
 
   if (!reviewer || !['ADMIN', 'REVIEWER'].includes(reviewer.role)) {
@@ -205,18 +190,16 @@ export async function reviewVerificationDocument(
 }
 
 export async function updateVerificationStatus(
+  reviewerUserId: string,
   profileId: string,
   status: 'VERIFIED' | 'REJECTED' | 'SUSPENDED'
 ) {
-  const supabase = await createSupabaseServerClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  
-  if (!user) {
+  if (!reviewerUserId) {
     throw new Error("Not authenticated");
   }
 
   const reviewer = await prisma.profile.findUnique({
-    where: { userId: user.id }
+    where: { userId: reviewerUserId }
   });
 
   if (!reviewer || !['ADMIN', 'REVIEWER'].includes(reviewer.role)) {

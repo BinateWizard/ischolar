@@ -2,17 +2,19 @@
 
 import { useState } from "react";
 import { reviewVerificationDocument, updateVerificationStatus } from "@/lib/actions/verification";
+import { useAuth } from "@/lib/hooks/useAuth";
 
 export default function VerificationReviewClient({ requests }: { requests: any[] }) {
+  const { user } = useAuth();
   const [selectedProfile, setSelectedProfile] = useState<any>(null);
   const [processing, setProcessing] = useState(false);
 
   async function handleApprove(profileId: string) {
-    if (!confirm("Approve this account?")) return;
+    if (!user || !confirm("Approve this account?")) return;
     
     setProcessing(true);
     try {
-      await updateVerificationStatus(profileId, 'VERIFIED');
+      await updateVerificationStatus(user.uid, profileId, 'VERIFIED');
       window.location.reload();
     } catch (err) {
       alert("Failed to approve account");
@@ -22,12 +24,14 @@ export default function VerificationReviewClient({ requests }: { requests: any[]
   }
 
   async function handleReject(profileId: string) {
+    if (!user) return;
+    
     const reason = prompt("Reason for rejection:");
     if (!reason) return;
     
     setProcessing(true);
     try {
-      await updateVerificationStatus(profileId, 'REJECTED');
+      await updateVerificationStatus(user.uid, profileId, 'REJECTED');
       window.location.reload();
     } catch (err) {
       alert("Failed to reject account");

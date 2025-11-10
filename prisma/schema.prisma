@@ -47,11 +47,12 @@ enum VerificationStatus {
 // User profile - extends Supabase auth.users
 model Profile {
   id                 String             @id @default(uuid())
-  userId             String             @unique @map("user_id") // links to auth.users
+  userId             String             @unique @map("user_id") // links to NextAuth user id
   lastName           String             @map("last_name")
   firstName          String             @map("first_name")
   middleInitial      String?            @map("middle_initial")
   email              String             @unique
+  password           String?            // Optional - null for OAuth users
   role               Role               @default(STUDENT)
   verificationStatus VerificationStatus @default(PENDING_VERIFICATION) @map("verification_status")
   studentNumber      String?            @unique @map("student_number")

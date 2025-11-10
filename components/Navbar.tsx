@@ -1,28 +1,14 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { onAuthChange, signOut } from "@/lib/firebase/auth";
+import { useSession, signOut } from "next-auth/react";
 import { useRouter } from "next/navigation";
 
 export default function Navbar() {
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [loading, setLoading] = useState(true);
+  const { data: session, status } = useSession();
   const router = useRouter();
 
-  useEffect(() => {
-    // Listen for auth state changes
-    const unsubscribe = onAuthChange((user) => {
-      setIsAuthenticated(!!user);
-      setLoading(false);
-    });
-
-    return () => unsubscribe();
-  }, []);
-
   async function handleSignOut() {
-    await signOut();
-    router.push("/");
-    router.refresh();
+    await signOut({ callbackUrl: '/' });
   }
 
   return (
@@ -45,9 +31,9 @@ export default function Navbar() {
             <a href="/profile" className="text-gray-600 hover:text-blue-600 transition-colors">Profile</a>
             <a href="/faqs" className="text-gray-600 hover:text-blue-600 transition-colors">FAQs</a>
             
-            {!loading && (
+            {status !== 'loading' && (
               <>
-                {isAuthenticated ? (
+                {session ? (
                   <button
                     onClick={handleSignOut}
                     className="flex items-center gap-2 px-4 py-2 text-gray-700 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"

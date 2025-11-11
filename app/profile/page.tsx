@@ -17,7 +17,7 @@ export default function ProfilePage() {
       if (!user) return;
       
       try {
-        const data = await getUserProfile(user.uid);
+        const data = await getUserProfile(user.id);
         setProfile(data);
       } catch (error) {
         console.error('Failed to load profile:', error);

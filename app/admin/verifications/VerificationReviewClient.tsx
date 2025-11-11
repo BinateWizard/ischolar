@@ -14,7 +14,7 @@ export default function VerificationReviewClient({ requests }: { requests: any[]
     
     setProcessing(true);
     try {
-      await updateVerificationStatus(user.uid, profileId, 'VERIFIED');
+      await updateVerificationStatus(user.id, profileId, 'VERIFIED');
       window.location.reload();
     } catch (err) {
       alert("Failed to approve account");
@@ -31,7 +31,7 @@ export default function VerificationReviewClient({ requests }: { requests: any[]
     
     setProcessing(true);
     try {
-      await updateVerificationStatus(user.uid, profileId, 'REJECTED');
+      await updateVerificationStatus(user.id, profileId, 'REJECTED');
       window.location.reload();
     } catch (err) {
       alert("Failed to reject account");

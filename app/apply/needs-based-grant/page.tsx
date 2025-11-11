@@ -48,7 +48,7 @@ export default function NeedsBasedGrantApplicationPage() {
     setError(null);
 
     try {
-      await submitApplication(user.uid, {
+      await submitApplication(user.id, {
         programCycleId: NEEDS_BASED_PROGRAM_CYCLE_ID,
         gwa: gwaValue,
         yearLevel: formData.yearLevel,

@@ -1,27 +1,20 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
-import { onAuthChange } from "@/lib/firebase/auth";
-import { User } from "firebase/auth";
+import { useEffect } from "react";
 
 export function useAuth(requireAuth: boolean = false) {
-  const [user, setUser] = useState<User | null>(null);
-  const [loading, setLoading] = useState(true);
+  const { data: session, status } = useSession();
   const router = useRouter();
+  const loading = status === "loading";
+  const user = session?.user;
 
   useEffect(() => {
-    const unsubscribe = onAuthChange((user) => {
-      setUser(user);
-      setLoading(false);
+    if (requireAuth && !loading && !user) {
+      router.push("/signin");
+    }
+  }, [requireAuth, loading, user, router]);
 
-      if (requireAuth && !user) {
-        router.push("/signin");
-      }
-    });
-
-    return () => unsubscribe();
-  }, [requireAuth, router]);
-
-  return { user, loading };
+  return { user, loading, session };
 }

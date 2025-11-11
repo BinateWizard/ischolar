@@ -37,7 +37,7 @@ export default function VerifyAccountPage() {
     if (!user) return;
     
     try {
-      const data = await getVerificationStatus(user.uid);
+      const data = await getVerificationStatus(user.id);
       if (!data) {
         router.push("/signin");
         return;
@@ -74,7 +74,7 @@ export default function VerifyAccountPage() {
     setLoading(true);
 
     try {
-      await updateProfileInfo(user.uid, { studentNumber, campus, course, yearLevel });
+      await updateProfileInfo(user.id, { studentNumber, campus, course, yearLevel });
       setStep(2);
     } catch (err: any) {
       setError(err.message || "Failed to update profile");
@@ -94,7 +94,7 @@ export default function VerifyAccountPage() {
       formData.append("docType", docType);
       formData.append("file", file);
       
-      await uploadVerificationDocument(user.uid, formData);
+      await uploadVerificationDocument(user.id, formData);
       await loadProfile();
     } catch (err: any) {
       setError(err.message || "Failed to upload document");

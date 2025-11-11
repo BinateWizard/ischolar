@@ -47,7 +47,7 @@ export default function MeritScholarshipApplicationPage() {
     setError(null);
 
     try {
-      await submitApplication(user.uid, {
+      await submitApplication(user.id, {
         programCycleId: MERIT_PROGRAM_CYCLE_ID,
         gwa: gwaValue,
         yearLevel: formData.yearLevel,

@@ -20,7 +20,7 @@ export default function AdminVerificationsPage() {
       if (!user) return;
       
       try {
-        const data = await getVerificationRequests(user.uid);
+        const data = await getVerificationRequests(user.id);
         setRequests(data);
         setIsAdmin(true);
       } catch (error: any) {

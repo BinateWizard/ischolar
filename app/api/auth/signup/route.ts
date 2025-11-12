@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import bcrypt from 'bcrypt';
 import { randomBytes } from 'crypto';
+import { sendVerificationEmail } from '@/lib/email';
 
 export async function POST(req: Request) {
   try {
@@ -22,10 +23,11 @@ export async function POST(req: Request) {
       );
     }
 
-    // Check if user already exists
-    const existingUser = await prisma.profile.findUnique({
-      where: { email }
-    });
+    // Check if user already exists (in Profile or PendingUser)
+    const [existingUser, existingPending] = await Promise.all([
+      prisma.profile.findUnique({ where: { email } }),
+      prisma.pendingUser.findUnique({ where: { email } })
+    ]);
 
     if (existingUser) {
       return NextResponse.json(
@@ -37,29 +39,60 @@ export async function POST(req: Request) {
     // Hash password
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    // Generate a unique userId
-    const userId = randomBytes(16).toString('hex');
+    // Generate verification token
+    const verificationToken = randomBytes(32).toString('hex');
+    const tokenExpiry = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
 
-    // Create user
-    const profile = await prisma.profile.create({
-      data: {
-        userId,
+    // Create or update pending user (don't create Profile yet)
+    if (existingPending) {
+      // Update existing pending user with new token
+      await prisma.pendingUser.update({
+        where: { email },
+        data: {
+          password: hashedPassword,
+          lastName,
+          firstName,
+          middleInitial: middleInitial || null,
+          verificationToken,
+          tokenExpiry,
+        }
+      });
+    } else {
+      // Create new pending user
+      await prisma.pendingUser.create({
+        data: {
+          email,
+          password: hashedPassword,
+          lastName,
+          firstName,
+          middleInitial: middleInitial || null,
+          verificationToken,
+          tokenExpiry,
+        }
+      });
+    }
+
+    // Send verification email
+    try {
+      await sendVerificationEmail(
         email,
-        password: hashedPassword,
-        lastName,
-        firstName,
-        middleInitial: middleInitial || null,
-        role: 'STUDENT',
-        verificationStatus: 'PENDING_VERIFICATION'
-      }
-    });
+        verificationToken,
+        `${firstName} ${lastName}`
+      );
+    } catch (emailError) {
+      console.error('Email sending failed:', emailError);
+      return NextResponse.json(
+        { error: 'Failed to send verification email. Please try again.' },
+        { status: 500 }
+      );
+    }
 
     return NextResponse.json({
       success: true,
+      requiresVerification: true,
       user: {
-        id: profile.userId,
-        email: profile.email,
-        name: `${profile.firstName} ${profile.lastName}`
+        email: email,
+        name: `${firstName} ${lastName}`
       }
     });
   } catch (error: any) {

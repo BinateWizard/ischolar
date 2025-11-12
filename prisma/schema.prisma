@@ -41,7 +41,21 @@ enum VerificationStatus {
   UNDER_REVIEW
   VERIFIED
   REJECTED
-  SUSPENDED
+}
+
+// Pending user registrations - waiting for email verification
+model PendingUser {
+  id                String   @id @default(uuid())
+  email             String   @unique
+  password          String   // Hashed password
+  lastName          String   @map("last_name")
+  firstName         String   @map("first_name")
+  middleInitial     String?  @map("middle_initial")
+  verificationToken String   @unique @map("verification_token")
+  tokenExpiry       DateTime @map("token_expiry")
+  createdAt         DateTime @default(now()) @map("created_at")
+
+  @@map("pending_users")
 }
 
 // User profile - extends Supabase auth.users
@@ -59,6 +73,9 @@ model Profile {
   campus             String?
   course             String?
   yearLevel          String?            @map("year_level")
+  emailVerified      DateTime?          @map("email_verified")
+  verificationToken  String?            @unique @map("verification_token")
+  tokenExpiry        DateTime?          @map("token_expiry")
   createdAt          DateTime           @default(now()) @map("created_at")
   updatedAt          DateTime           @updatedAt @map("updated_at")
 

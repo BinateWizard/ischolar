@@ -53,19 +53,25 @@ export default function SignUpPage() {
         throw new Error(data.error || 'Failed to create account');
       }
 
-      // Auto sign in after signup
-      const signInResult = await signIn('credentials', {
-        email,
-        password,
-        redirect: false
-      });
-
-      if (signInResult?.error) {
-        setError('Account created but sign-in failed. Please sign in manually.');
+      // Check if email verification is required
+      if (data.requiresVerification) {
+        // Redirect to pending verification page
+        router.push(`/pending-verification?email=${encodeURIComponent(email)}`);
       } else {
-        // Redirect to profile
-        router.push('/profile');
-        router.refresh();
+        // Auto sign in after signup (for OAuth users)
+        const signInResult = await signIn('credentials', {
+          email,
+          password,
+          redirect: false
+        });
+
+        if (signInResult?.error) {
+          setError('Account created but sign-in failed. Please sign in manually.');
+        } else {
+          // Redirect to profile
+          router.push('/profile');
+          router.refresh();
+        }
       }
     } catch (err: any) {
       console.error('Signup error:', err);

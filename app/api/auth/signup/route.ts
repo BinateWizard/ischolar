@@ -62,10 +62,11 @@ export async function POST(req: Request) {
         name: `${profile.firstName} ${profile.lastName}`
       }
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Signup error:', error);
+    const isDev = process.env.NODE_ENV !== 'production';
     return NextResponse.json(
-      { error: 'Failed to create account' },
+      { error: isDev ? (error?.message || String(error)) : 'Failed to create account' },
       { status: 500 }
     );
   }

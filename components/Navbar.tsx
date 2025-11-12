@@ -28,7 +28,9 @@ export default function Navbar() {
             <a href="/" className="text-gray-600 hover:text-blue-600 transition-colors">Home</a>
             <a href="/apply" className="text-gray-600 hover:text-blue-600 transition-colors">Apply</a>
             <a href="/status" className="text-gray-600 hover:text-blue-600 transition-colors">Status</a>
-            <a href="/profile" className="text-gray-600 hover:text-blue-600 transition-colors">Profile</a>
+            {session && (
+              <a href="/profile" className="text-gray-600 hover:text-blue-600 transition-colors">Profile</a>
+            )}
             <a href="/faqs" className="text-gray-600 hover:text-blue-600 transition-colors">FAQs</a>
             
             {status !== 'loading' && (

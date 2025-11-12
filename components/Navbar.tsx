@@ -2,6 +2,7 @@
 
 import { useSession, signOut } from "next-auth/react";
 import { useRouter } from "next/navigation";
+import NotificationBell from "./NotificationBell";
 
 export default function Navbar() {
   const { data: session, status } = useSession();
@@ -32,6 +33,9 @@ export default function Navbar() {
               <a href="/profile" className="text-gray-600 hover:text-blue-600 transition-colors">Profile</a>
             )}
             <a href="/faqs" className="text-gray-600 hover:text-blue-600 transition-colors">FAQs</a>
+            
+            {/* Notification Bell */}
+            <NotificationBell />
             
             {status !== 'loading' && (
               <>

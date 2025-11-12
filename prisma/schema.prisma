@@ -251,19 +251,36 @@ model Disbursement {
   @@map("disbursements")
 }
 
+enum NotificationType {
+  APPLICATION_SUBMITTED
+  APPLICATION_APPROVED
+  APPLICATION_DENIED
+  VERIFICATION_PENDING
+  VERIFICATION_APPROVED
+  VERIFICATION_REJECTED
+  DOCUMENT_REQUIRED
+  THRESHOLD_WARNING
+  SYSTEM_ALERT
+  REMINDER
+}
+
 // Notifications for users
 model Notification {
-  id        String   @id @default(uuid())
-  userId    String   @map("user_id")
-  title     String
-  body      String?  @db.Text
-  type      String?  // 'STATUS_UPDATE','MISSING_DOC','REMINDER'
-  isRead    Boolean  @default(false) @map("is_read")
-  createdAt DateTime @default(now()) @map("created_at")
+  id           String           @id @default(uuid())
+  userId       String           @map("user_id")
+  title        String
+  body         String?          @db.Text
+  type         NotificationType
+  isRead       Boolean          @default(false) @map("is_read")
+  actionUrl    String?          @map("action_url") // Link to relevant page
+  relatedId    String?          @map("related_id") // Application ID, Document ID, etc.
+  priority     String           @default("NORMAL") // 'LOW', 'NORMAL', 'HIGH', 'URGENT'
+  createdAt    DateTime         @default(now()) @map("created_at")
 
   user Profile @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId, isRead])
+  @@index([createdAt])
   @@map("notifications")
 }
 

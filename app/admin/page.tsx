@@ -26,25 +26,44 @@ interface DashboardStats {
   }>;
 }
 
+interface Notification {
+  id: string;
+  title: string;
+  body: string | null;
+  type: string;
+  priority: string;
+  actionUrl: string | null;
+  createdAt: string;
+  isRead: boolean;
+}
+
 export default function AdminDashboard() {
   const { user } = useAuth();
   const [stats, setStats] = useState<DashboardStats | null>(null);
+  const [notifications, setNotifications] = useState<Notification[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    async function fetchStats() {
+    async function fetchData() {
       try {
-        const res = await fetch('/api/admin/dashboard');
-        const data = await res.json();
-        setStats(data);
+        const [statsRes, notifRes] = await Promise.all([
+          fetch('/api/admin/dashboard'),
+          fetch('/api/notifications?limit=5&unread=true'),
+        ]);
+        
+        const statsData = await statsRes.json();
+        const notifData = await notifRes.json();
+        
+        setStats(statsData);
+        setNotifications(notifData);
       } catch (error) {
-        console.error('Failed to fetch dashboard stats:', error);
+        console.error('Failed to fetch dashboard data:', error);
       } finally {
         setLoading(false);
       }
     }
 
-    fetchStats();
+    fetchData();
   }, []);
 
   if (loading) {
@@ -137,6 +156,96 @@ export default function AdminDashboard() {
           </Link>
         ))}
       </div>
+
+      {/* Alerts & Notifications */}
+      {notifications.length > 0 && (
+        <div className="mb-8">
+          <h2 className="text-xl font-bold text-gray-900 mb-4">⚠️ Important Alerts</h2>
+          <div className="space-y-3">
+            {notifications.filter(n => n.priority === 'URGENT' || n.priority === 'HIGH').slice(0, 3).map((notif) => (
+              <div
+                key={notif.id}
+                className={`p-4 rounded-lg border-l-4 ${
+                  notif.priority === 'URGENT'
+                    ? 'bg-red-50 border-red-500'
+                    : 'bg-orange-50 border-orange-500'
+                }`}
+              >
+                <div className="flex items-start justify-between">
+                  <div className="flex-1">
+                    <h3 className={`font-semibold ${
+                      notif.priority === 'URGENT' ? 'text-red-900' : 'text-orange-900'
+                    }`}>
+                      {notif.title}
+                    </h3>
+                    {notif.body && (
+                      <p className={`text-sm mt-1 ${
+                        notif.priority === 'URGENT' ? 'text-red-700' : 'text-orange-700'
+                      }`}>
+                        {notif.body}
+                      </p>
+                    )}
+                  </div>
+                  {notif.actionUrl && (
+                    <Link
+                      href={notif.actionUrl}
+                      className={`ml-4 px-4 py-2 rounded-lg text-sm font-medium ${
+                        notif.priority === 'URGENT'
+                          ? 'bg-red-600 text-white hover:bg-red-700'
+                          : 'bg-orange-600 text-white hover:bg-orange-700'
+                      } transition-colors`}
+                    >
+                      View Details
+                    </Link>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Pending Actions Card */}
+      {(stats?.pendingApplications || stats?.pendingVerifications || 0) > 0 && (
+        <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-6 mb-8">
+          <div className="flex items-center gap-3 mb-4">
+            <svg className="w-6 h-6 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            <h2 className="text-xl font-bold text-yellow-900">Pending Actions Required</h2>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {stats?.pendingApplications && stats.pendingApplications > 0 && (
+              <Link 
+                href="/admin/applications?status=submitted"
+                className="flex items-center justify-between p-4 bg-white rounded-lg hover:shadow-md transition-shadow"
+              >
+                <div>
+                  <p className="text-sm text-gray-600">Applications to Review</p>
+                  <p className="text-2xl font-bold text-gray-900">{stats.pendingApplications}</p>
+                </div>
+                <svg className="w-8 h-8 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                </svg>
+              </Link>
+            )}
+            {stats?.pendingVerifications && stats.pendingVerifications > 0 && (
+              <Link
+                href="/admin/verifications"
+                className="flex items-center justify-between p-4 bg-white rounded-lg hover:shadow-md transition-shadow"
+              >
+                <div>
+                  <p className="text-sm text-gray-600">Accounts to Verify</p>
+                  <p className="text-2xl font-bold text-gray-900">{stats.pendingVerifications}</p>
+                </div>
+                <svg className="w-8 h-8 text-purple-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                </svg>
+              </Link>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Quick Actions */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">

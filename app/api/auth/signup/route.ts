@@ -43,6 +43,37 @@ export async function POST(req: Request) {
     const verificationToken = randomBytes(32).toString('hex');
     const tokenExpiry = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
 
+    // Development shortcut: allow creating the Profile immediately and skip email verification
+    const skipVerification = process.env.DEV_SKIP_EMAIL_VERIFICATION === 'true';
+
+    if (skipVerification) {
+      // Create Profile directly so sign-in works during development without email verification.
+      // Generate a unique userId to satisfy the `userId` constraint.
+      const userId = randomBytes(16).toString('hex');
+
+      try {
+        await prisma.profile.create({
+          data: {
+            userId,
+            email,
+            password: hashedPassword,
+            lastName,
+            firstName,
+            middleInitial: middleInitial || null,
+            role: 'STUDENT',
+            verificationStatus: 'VERIFIED',
+            emailVerified: new Date(),
+          }
+        });
+      } catch (err) {
+        console.error('Failed to create profile in dev-skip flow:', err);
+        return NextResponse.json({ error: 'Failed to create account' }, { status: 500 });
+      }
+
+      // Do not send verification email in dev-skip mode
+      return NextResponse.json({ success: true, requiresVerification: false, user: { email, name: `${firstName} ${lastName}` } });
+    }
+
     // Create or update pending user (don't create Profile yet)
     if (existingPending) {
       // Update existing pending user with new token

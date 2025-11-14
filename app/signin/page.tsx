@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { signIn } from "next-auth/react";
+import { signIn, getSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 
@@ -29,8 +29,15 @@ export default function SignInPage() {
         setError('Invalid email or password');
         setLoading(false);
       } else {
-        // Redirect to profile
-        router.push("/profile");
+        // Determine role from session and redirect appropriately
+        const session = await getSession();
+        const role = session?.user?.role as string | undefined;
+        const adminRoles = ['ADMIN', 'REVIEWER', 'APPROVER'];
+        if (role && adminRoles.includes(role)) {
+          router.push('/admin');
+        } else {
+          router.push('/profile');
+        }
         router.refresh();
       }
     } catch (err: any) {

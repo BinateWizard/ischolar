@@ -1,0 +1,23 @@
+[
+  {
+    "role": "ADMIN",
+    "email": "aezravito15@outlook.com",
+    "firstName": "Admin",
+    "lastName": "User",
+    "password": "AdminPass123!"
+  },
+  {
+    "role": "STUDENT",
+    "email": "student1@example.com",
+    "firstName": "Juan",
+    "lastName": "Dela Cruz",
+    "password": "StudentPass1"
+  },
+  {
+    "role": "STUDENT",
+    "email": "student2@example.com",
+    "firstName": "Maria",
+    "lastName": "Santos",
+    "password": "StudentPass2"
+  }
+]

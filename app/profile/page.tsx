@@ -3,6 +3,7 @@
 import { useAuth } from "@/lib/hooks/useAuth";
 import { getUserProfile } from "@/lib/actions/profile";
 import { useEffect, useState } from "react";
+import { useRouter } from 'next/navigation';
 
 type ProfileData = Awaited<ReturnType<typeof getUserProfile>>;
 type Application = NonNullable<ProfileData>['applications'][number];
@@ -28,6 +29,15 @@ export default function ProfilePage() {
 
     loadProfile();
   }, [user]);
+
+  const router = useRouter();
+
+  // If logged-in user's role is not a STUDENT, redirect to admin area
+  useEffect(() => {
+    if (!profileLoading && profile && profile.role && profile.role !== 'STUDENT') {
+      router.push('/admin');
+    }
+  }, [profileLoading, profile, router]);
 
   if (loading || profileLoading) {
     return (

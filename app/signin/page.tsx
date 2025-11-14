@@ -61,6 +61,14 @@ export default function SignInPage() {
     <section className="snap-start min-h-[calc(100vh-5rem)] flex items-center bg-gradient-to-b from-white to-slate-50 py-12">
       <div className="max-w-md mx-auto w-full px-6">
         <div className="bg-white border border-gray-200 rounded-2xl shadow-sm p-8">
+          <div className="mb-4 flex items-center justify-between">
+            <Link href="/" className="text-sm text-gray-600 hover:text-gray-900 inline-flex items-center gap-2">
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+              </svg>
+              Back to home
+            </Link>
+          </div>
           <h1 className="text-2xl font-bold text-gray-900 mb-1">Sign in</h1>
           <p className="text-gray-600 mb-6">Access your applications and profile.</p>
 

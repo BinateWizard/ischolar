@@ -220,3 +220,8 @@ html {
 .transition-delay-400 {
   transition-delay: 0.4s;
 }
+
+/* Make pure white surfaces slightly off-white for a softer look */
+.bg-white {
+  background-color: #f8fafc !important;
+}

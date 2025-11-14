@@ -4,6 +4,8 @@ import { useAuth } from "@/lib/hooks/useAuth";
 import { useRouter, usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { signOut } from 'next-auth/react';
+import NotificationBell from "@/components/NotificationBell";
 
 export default function AdminLayout({
   children,
@@ -20,6 +22,31 @@ export default function AdminLayout({
       router.push('/');
     }
   }, [user, loading, router]);
+
+  // Persist sidebar state per-user in localStorage so preference survives reloads
+  useEffect(() => {
+    if (!user) return;
+    try {
+      const key = `ischolar:sidebarOpen:${user.id}`;
+      const stored = window.localStorage.getItem(key);
+      if (stored !== null) {
+        setSidebarOpen(stored === 'true');
+      }
+    } catch (err) {
+      // ignore localStorage errors
+      console.debug('Could not load sidebar state', err);
+    }
+  }, [user]);
+
+  useEffect(() => {
+    if (!user) return;
+    try {
+      const key = `ischolar:sidebarOpen:${user.id}`;
+      window.localStorage.setItem(key, sidebarOpen ? 'true' : 'false');
+    } catch (err) {
+      console.debug('Could not save sidebar state', err);
+    }
+  }, [sidebarOpen, user]);
 
   if (loading) {
     return (
@@ -105,53 +132,100 @@ export default function AdminLayout({
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Mobile sidebar toggle */}
-      <div className="lg:hidden fixed top-20 left-4 z-40">
-        <button
-          onClick={() => setSidebarOpen(!sidebarOpen)}
-          className="p-2 rounded-lg bg-white shadow-md border border-gray-200"
-        >
-          <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-          </svg>
-        </button>
-      </div>
+          {/* Mobile sidebar toggle */}
+          <div className="lg:hidden fixed top-4 left-4 z-40">
+            <button
+              onClick={() => setSidebarOpen(!sidebarOpen)}
+              className="p-2 rounded-lg bg-white shadow-md border border-gray-200"
+              aria-label="Toggle sidebar"
+            >
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+              </svg>
+            </button>
+          </div>
 
       {/* Sidebar */}
       <aside
-        className={`fixed top-20 left-0 h-[calc(100vh-5rem)] bg-white border-r border-gray-200 transition-all duration-300 z-30 ${
+        className={`fixed top-0 left-0 bottom-0 h-screen bg-white border-r border-gray-200 transition-all duration-300 z-30 ${
           sidebarOpen ? 'w-64' : 'w-0 lg:w-20'
         }`}
       >
         <div className="h-full overflow-y-auto py-6">
+          {/* Collapse control for desktop */}
+          <div className={`px-3 mb-4 hidden lg:flex ${sidebarOpen ? 'justify-end' : 'justify-center'}`}>
+            <button
+              onClick={() => setSidebarOpen(!sidebarOpen)}
+              className="p-2 rounded-md text-gray-600 hover:bg-gray-100"
+              title={sidebarOpen ? 'Collapse sidebar' : 'Expand sidebar'}
+            >
+              {sidebarOpen ? (
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                </svg>
+              ) : (
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                </svg>
+              )}
+            </button>
+          </div>
           <nav className="space-y-1 px-3">
             {navigation.map((item) => {
-              const isActive = pathname === item.href || (item.href !== '/admin' && pathname?.startsWith(item.href));
-              return (
-                <Link
-                  key={item.name}
-                  href={item.href}
-                  className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
-                    isActive
-                      ? 'bg-blue-50 text-blue-700 font-medium'
-                      : 'text-gray-700 hover:bg-gray-50'
-                  }`}
-                >
-                  {item.icon}
-                  <span className={`${sidebarOpen ? 'block' : 'hidden lg:hidden'}`}>
-                    {item.name}
-                  </span>
-                </Link>
-              );
-            })}
+                const isActive = pathname === item.href || (item.href !== '/admin' && pathname?.startsWith(item.href));
+                return (
+                  <div key={item.name} className="relative group">
+                    <Link
+                      href={item.href}
+                      className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
+                        isActive
+                          ? 'bg-blue-50 text-blue-700 font-medium'
+                          : 'text-gray-700 hover:bg-gray-50'
+                      }`}
+                    >
+                      {item.icon}
+                      <span className={`${sidebarOpen ? 'block' : 'hidden lg:hidden'}`}>
+                        {item.name}
+                      </span>
+                    </Link>
+
+                    {/* Tooltip when collapsed */}
+                    {!sidebarOpen && (
+                      <div className="pointer-events-none absolute left-full top-1/2 -translate-y-1/2 ml-2 hidden group-hover:block">
+                        <div className="bg-white border border-gray-200 text-sm text-gray-800 px-3 py-2 rounded shadow-lg whitespace-nowrap">
+                          {item.name}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
           </nav>
 
           {/* User Info */}
           <div className={`mt-auto pt-6 px-3 border-t border-gray-200 ${sidebarOpen ? 'block' : 'hidden lg:hidden'}`}>
-            <div className="px-4 py-3 bg-gray-50 rounded-lg">
-              <p className="text-xs text-gray-500 mb-1">Signed in as</p>
+            <div className="px-4 py-3 bg-gray-50 rounded-lg space-y-2">
+              <p className="text-xs text-gray-500">Signed in as</p>
               <p className="text-sm font-medium text-gray-900 truncate">{user.email}</p>
-              <p className="text-xs text-blue-600 font-medium mt-1">Admin</p>
+              <div className="flex items-center justify-between">
+                <span className="text-xs text-blue-600 font-medium">Admin</span>
+                <button
+                  onClick={() => signOut({ callbackUrl: '/' })}
+                  className="text-xs text-rose-600 hover:text-rose-800"
+                >
+                  Sign out
+                </button>
+              </div>
+              <div className="pt-2">
+                <a
+                  href="/"
+                  target="_blank"
+                  rel="noreferrer"
+                  className="inline-flex items-center gap-2 text-sm text-gray-700 hover:text-gray-900"
+                >
+                  View site
+                </a>
+              </div>
             </div>
           </div>
         </div>
@@ -163,6 +237,11 @@ export default function AdminLayout({
           sidebarOpen ? 'lg:ml-64' : 'lg:ml-20'
         } pt-6`}
       >
+        {/* Admin header: notification area */}
+        <div className="px-6 pb-4 flex items-center justify-end">
+          <NotificationBell />
+        </div>
+
         {children}
       </main>
     </div>

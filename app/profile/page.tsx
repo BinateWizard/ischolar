@@ -190,10 +190,12 @@ export default function ProfilePage() {
                 Account Info
               </h3>
               <div className="space-y-3">
-                <div className="flex justify-between items-center py-2 border-b border-gray-100">
-                  <span className="text-sm text-gray-600">Role</span>
-                  <span className="text-sm font-medium text-gray-900 px-2 py-1 bg-blue-50 text-blue-700 rounded">{profile.role}</span>
-                </div>
+                {profile.role !== 'STUDENT' && (
+                  <div className="flex justify-between items-center py-2 border-b border-gray-100">
+                    <span className="text-sm text-gray-600">Role</span>
+                    <span className="text-sm font-medium text-gray-900 px-2 py-1 bg-blue-50 text-blue-700 rounded">{profile.role}</span>
+                  </div>
+                )}
                 <div className="flex justify-between items-center py-2 border-b border-gray-100">
                   <span className="text-sm text-gray-600">User ID</span>
                   <span className="text-xs font-mono text-gray-900">{profile.userId.slice(0, 8)}...</span>

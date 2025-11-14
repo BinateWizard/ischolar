@@ -31,8 +31,8 @@ export async function GET() {
       recentUsers,
       recentApplications
     ] = await Promise.all([
-      // Total users
-      prisma.profile.count(),
+      // Total users (students only)
+      prisma.profile.count({ where: { role: 'STUDENT' } }),
 
       // Total applications
       prisma.application.count(),
@@ -57,8 +57,9 @@ export async function GET() {
         where: { isActive: true }
       }),
 
-      // Recent users (last 5)
+      // Recent users (last 5) - students only
       prisma.profile.findMany({
+        where: { role: 'STUDENT' },
         take: 5,
         orderBy: { createdAt: 'desc' },
         select: {

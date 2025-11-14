@@ -10,8 +10,9 @@ type Props = {
 export default function Footer({ forceRender = false, fullScreen = false }: Props) {
   const pathname = usePathname();
   const isHome = pathname === "/";
+  const isAdmin = pathname?.startsWith('/admin');
   // Hide global footer on home route unless explicitly forced by a page
-  if (isHome && !forceRender) return null;
+  if ((isHome || isAdmin) && !forceRender) return null;
 
   const base = "bg-gray-900 text-gray-300";
   const frame = fullScreen ? "min-h-full h-full flex items-center" : "border-t border-gray-800";

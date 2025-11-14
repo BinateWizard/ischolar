@@ -1,6 +1,12 @@
 import { Resend } from 'resend';
 
-const resend = new Resend(process.env.RESEND_API_KEY);
+function getResendClient() {
+  const apiKey = process.env.RESEND_API_KEY;
+  if (!apiKey) {
+    throw new Error('RESEND_API_KEY is not configured on the server');
+  }
+  return new Resend(apiKey);
+}
 
 export async function sendVerificationEmail(
   email: string,
@@ -10,7 +16,8 @@ export async function sendVerificationEmail(
   const verificationUrl = `${process.env.NEXTAUTH_URL}/verify-email?token=${token}`;
 
   try {
-    await resend.emails.send({
+    const resend = getResendClient();
+    const resp = await resend.emails.send({
       from: 'iScholar <onboarding@resend.dev>',
       to: email,
       subject: 'Welcome to iScholar! 🎓',
@@ -113,9 +120,12 @@ export async function sendVerificationEmail(
     });
     
     console.log('Verification email sent to:', email);
+    console.log('Resend send response:', resp);
     return { success: true };
   } catch (error) {
-    console.error('Failed to send verification email:', error);
+    // Log detailed error where possible
+    console.error('Failed to send verification email:', (error as any)?.message || error);
+    if ((error as any)?.response) console.error('Resend error response:', (error as any).response);
     throw new Error('Failed to send verification email');
   }
 }
@@ -128,6 +138,7 @@ export async function sendPasswordResetEmail(
   const resetUrl = `${process.env.NEXTAUTH_URL}/reset-password?token=${token}`;
 
   try {
+    const resend = getResendClient();
     await resend.emails.send({
       from: 'iScholar <onboarding@resend.dev>',
       to: email,
@@ -179,10 +190,11 @@ export async function sendPasswordResetEmail(
         </html>
       `,
     });
-    
+
     return { success: true };
   } catch (error) {
-    console.error('Failed to send password reset email:', error);
+    console.error('Failed to send password reset email:', (error as any)?.message || error);
+    if ((error as any)?.response) console.error('Resend error response:', (error as any).response);
     throw new Error('Failed to send password reset email');
   }
 }

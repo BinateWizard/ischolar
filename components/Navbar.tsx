@@ -2,7 +2,7 @@
 
 import { useSession, signOut } from "next-auth/react";
 import { useRouter } from "next/navigation";
-import NotificationBell from "./NotificationBell";
+import NotificationBell from "@/components/NotificationBell";
 
 export default function Navbar() {
   const { data: session, status } = useSession();
@@ -34,12 +34,10 @@ export default function Navbar() {
             )}
             <a href="/faqs" className="text-gray-600 hover:text-blue-600 transition-colors">FAQs</a>
             
-            {/* Notification Bell */}
-            <NotificationBell />
-            
-            {status !== 'loading' && (
-              <>
-                {session ? (
+            <>
+              {session ? (
+                <div className="flex items-center gap-3">
+                  <NotificationBell />
                   <button
                     onClick={handleSignOut}
                     className="flex items-center gap-2 px-4 py-2 text-gray-700 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
@@ -50,18 +48,18 @@ export default function Navbar() {
                     </svg>
                     <span className="hidden lg:inline">Sign Out</span>
                   </button>
-                ) : (
-                  <>
-                    <a href="/signup" className="px-4 py-2 border border-blue-600 text-blue-600 rounded-lg hover:bg-blue-50 transition-colors">
-                      Sign Up
-                    </a>
-                    <a href="/signin" className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
-                      Sign In
-                    </a>
-                  </>
-                )}
-              </>
-            )}
+                </div>
+              ) : (
+                <>
+                  <a href="/signup" className="px-4 py-2 border border-blue-600 text-blue-600 rounded-lg hover:bg-blue-50 transition-colors">
+                    Sign Up
+                  </a>
+                  <a href="/signin" className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
+                    Sign In
+                  </a>
+                </>
+              )}
+            </>
           </div>
         </div>
       </div>

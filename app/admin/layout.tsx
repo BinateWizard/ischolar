@@ -90,6 +90,19 @@ export default function AdminLayout({
     },
   ];
 
+  // Optionally expose dev-only debug tools via env flag
+  if (process.env.NEXT_PUBLIC_ENABLE_DEBUG === 'true') {
+    navigation.push({
+      name: 'Debug Email',
+      href: '/admin/debug-email',
+      icon: (
+        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 12h.01M12 12h.01M8 12h.01M21 12c0 4.97-4.03 9-9 9s-9-4.03-9-9 4.03-9 9-9 9 4.03 9 9z" />
+        </svg>
+      ),
+    });
+  }
+
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Mobile sidebar toggle */}

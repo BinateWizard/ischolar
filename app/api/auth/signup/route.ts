@@ -39,93 +39,31 @@ export async function POST(req: Request) {
     // Hash password
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    // Generate verification token
-    const verificationToken = randomBytes(32).toString('hex');
-    const tokenExpiry = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
+    // Create the profile immediately and mark as pending verification.
+    // This accepts any email for now; verification can be performed later.
+    const userId = randomBytes(16).toString('hex');
 
-    // Development shortcut: allow creating the Profile immediately and skip email verification
-    const skipVerification = process.env.DEV_SKIP_EMAIL_VERIFICATION === 'true';
-
-    if (skipVerification) {
-      // Create Profile directly so sign-in works during development without email verification.
-      // Generate a unique userId to satisfy the `userId` constraint.
-      const userId = randomBytes(16).toString('hex');
-
-      try {
-        await prisma.profile.create({
-          data: {
-            userId,
-            email,
-            password: hashedPassword,
-            lastName,
-            firstName,
-            middleInitial: middleInitial || null,
-            role: 'STUDENT',
-            verificationStatus: 'VERIFIED',
-            emailVerified: new Date(),
-          }
-        });
-      } catch (err) {
-        console.error('Failed to create profile in dev-skip flow:', err);
-        return NextResponse.json({ error: 'Failed to create account' }, { status: 500 });
-      }
-
-      // Do not send verification email in dev-skip mode
-      return NextResponse.json({ success: true, requiresVerification: false, user: { email, name: `${firstName} ${lastName}` } });
-    }
-
-    // Create or update pending user (don't create Profile yet)
-    if (existingPending) {
-      // Update existing pending user with new token
-      await prisma.pendingUser.update({
-        where: { email },
+    try {
+      await prisma.profile.create({
         data: {
-          password: hashedPassword,
-          lastName,
-          firstName,
-          middleInitial: middleInitial || null,
-          verificationToken,
-          tokenExpiry,
-        }
-      });
-    } else {
-      // Create new pending user
-      await prisma.pendingUser.create({
-        data: {
+          userId,
           email,
           password: hashedPassword,
           lastName,
           firstName,
           middleInitial: middleInitial || null,
-          verificationToken,
-          tokenExpiry,
+          role: 'STUDENT',
+          verificationStatus: 'PENDING_VERIFICATION',
+          // emailVerified remains null until the user verifies
         }
       });
+    } catch (err) {
+      console.error('Failed to create profile:', err);
+      return NextResponse.json({ error: 'Failed to create account' }, { status: 500 });
     }
 
-    // Send verification email
-    try {
-      await sendVerificationEmail(
-        email,
-        verificationToken,
-        `${firstName} ${lastName}`
-      );
-    } catch (emailError) {
-      console.error('Email sending failed:', emailError);
-      return NextResponse.json(
-        { error: 'Failed to send verification email. Please try again.' },
-        { status: 500 }
-      );
-    }
-
-    return NextResponse.json({
-      success: true,
-      requiresVerification: true,
-      user: {
-        email: email,
-        name: `${firstName} ${lastName}`
-      }
-    });
+    // Do not send verification email at signup time; account is usable immediately.
+    return NextResponse.json({ success: true, requiresVerification: false, user: { email, name: `${firstName} ${lastName}` } });
   } catch (error: any) {
     console.error('Signup error:', error);
     const isDev = process.env.NODE_ENV !== 'production';

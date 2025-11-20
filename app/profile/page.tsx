@@ -4,6 +4,7 @@ import { useAuth } from "@/lib/hooks/useAuth";
 import { getUserProfile } from "@/lib/actions/profile";
 import { useEffect, useState } from "react";
 import { useRouter } from 'next/navigation';
+import Link from "next/link";
 
 type ProfileData = Awaited<ReturnType<typeof getUserProfile>>;
 type Application = NonNullable<ProfileData>['applications'][number];
@@ -77,9 +78,11 @@ export default function ProfilePage() {
               <div className="bg-gradient-to-r from-blue-600 to-blue-700 px-6 py-4">
                 <div className="flex items-center justify-between">
                   <h2 className="text-xl font-semibold text-white">Personal Information</h2>
-                  <button className="px-4 py-2 text-sm bg-white text-blue-600 rounded-lg hover:bg-blue-50 transition-colors font-medium">
-                    Edit Profile
-                  </button>
+                  <Link href="/profile/edit">
+                    <button className="px-4 py-2 text-sm bg-white text-blue-600 rounded-lg hover:bg-blue-50 transition-colors font-medium">
+                      Edit Profile
+                    </button>
+                  </Link>
                 </div>
               </div>
               <div className="p-6">
